@@ -5,7 +5,7 @@ import connectDB from "./utils/db";
 import authRoutes from "./routes/authRoutes";
 import passport from "passport";
 import session from "express-session";
-import "../src/config/passport";
+import "./config/passport";
 
 dotenv.config();
 const app = express();
