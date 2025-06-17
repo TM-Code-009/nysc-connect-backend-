@@ -6,6 +6,7 @@ import connectDB from "./utils/db";
 import passport from "passport";
 import "./config/passport";
 import session from "express-session";
+import MongoStore from "connect-mongo";
 
 dotenv.config();
 const app = express();
@@ -20,8 +21,12 @@ app.use(session({
   secret: process.env.SESSION_SECRET || "your_fallback_secret",
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI!, // your MongoDB connection string
+    collectionName: "sessions",
+  }),
   cookie: {
-    secure: process.env.NODE_ENV === "production", // true on Render
+    secure: process.env.NODE_ENV === "production",
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24, // 1 day
   },

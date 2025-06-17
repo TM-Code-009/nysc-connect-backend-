@@ -1,3 +1,4 @@
+import jwt from "jsonwebtoken";
 import passport from "passport";
 import express from "express";
 import { registerUser, loginUser, verifyEmail, forgotPassword, resetPassword } from "../controllers/authController";
@@ -11,20 +12,24 @@ router.post("/forgot-password", forgotPassword as express.RequestHandler);
 router.post("/reset-password/:token", resetPassword as express.RequestHandler);
 
 
-router.get("/google", passport.authenticate("google", {
-  scope: ["profile", "email"]
-}));
 
-router.get("/google/callback",
-  passport.authenticate("google", {
-    failureRedirect: "/login",
-    session: false
-  }),
+
+
+router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+
+router.get(
+  "/google/callback",
+  passport.authenticate("google", { session: false, failureRedirect: "/login" }),
   (req, res) => {
-    // You can generate your own JWT here if needed
-    res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
+    const user: any = req.user;
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET!, { expiresIn: "1d" });
+
+    // Redirect to frontend with token (or set cookie)
+    res.redirect(`${process.env.FRONTEND_URL}/google-success?token=${token}`);
   }
 );
+
+
 
 
 
