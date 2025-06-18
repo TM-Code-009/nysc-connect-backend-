@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import passport from "passport";
 import express from "express";
 import { registerUser, loginUser, verifyEmail, forgotPassword, resetPassword } from "../controllers/authController";
-import User from "src/models/User";
+import User from "../models/User";
 
 const router = express.Router();
 
