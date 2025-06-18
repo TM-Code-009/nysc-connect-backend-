@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import passport from "passport";
 import express from "express";
 import { registerUser, loginUser, verifyEmail, forgotPassword, resetPassword } from "../controllers/authController";
+import User from "src/models/User";
 
 const router = express.Router();
 
@@ -10,7 +11,11 @@ router.post("/login", loginUser as express.RequestHandler);
 router.get("/verify-email/:token", verifyEmail as express.RequestHandler);
 router.post("/forgot-password", forgotPassword as express.RequestHandler);
 router.post("/reset-password/:token", resetPassword as express.RequestHandler);
-
+router.get("/check-verification-status", async (req, res) => {
+  const { email } = req.query;
+  const user = await User.findOne({ email });
+  res.json({ verified: user?.isVerified });
+});
 
 
 
