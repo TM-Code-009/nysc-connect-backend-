@@ -35,7 +35,7 @@ router.post("/resend-verification", async (req, res): Promise<void> => {
     });
 
     // Create verification link
-    const verificationLink = `${process.env.FRONTEND_URL}/verify-email/${token}`;
+    const verificationLink = `${process.env.FRONTEND_URL}/verify/${token}`;
 
     // Send email
     const subject = "🔐 Verify Your Email Again";

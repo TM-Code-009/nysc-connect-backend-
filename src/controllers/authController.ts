@@ -18,7 +18,7 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
   
       // 🔐 Create email verification token
       const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, { expiresIn: "3h" });
-      const verificationLink = `${process.env.FRONTEND_URL}/verify-email/${token}`;
+      const verificationLink = `${process.env.FRONTEND_URL}/verify/${token}`;
   
       // 📩 Send email
       const { subject, text, html } = generateVerificationEmail(email, verificationLink);
