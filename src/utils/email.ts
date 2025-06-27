@@ -19,7 +19,7 @@ const sendEmail = async (
 ): Promise<void> => {
   try {
     const mailOptions = {
-      from: `"NYSC Connect" <${process.env.GMAIL_USER}>`,
+      from: `"Green-link" <noreply@greenlink.com>`,
       to,
       subject,
       text,
