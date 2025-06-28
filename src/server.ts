@@ -12,7 +12,7 @@ import MongoStore from "connect-mongo";
 dotenv.config();
 const app = express();
 
-app.use(cors({ origin: "https://green-linkio.web.app", credentials: true }));
+app.use(cors({ origin: ["http://localhost:5173", "https://green-linkio.web.app"], credentials: true }));
 
 app.use(express.json());
 
