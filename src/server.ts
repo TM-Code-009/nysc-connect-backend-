@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes";
+import userRoutes from "./routes/useRoutes";
 import cors from "cors";
 import connectDB from "./utils/db";
 import passport from "passport";
@@ -18,6 +19,7 @@ app.use(express.json());
 connectDB();
 
 app.use("/api/auth", authRoutes);
+app.use("/api/user", userRoutes);
 app.use(session({
   secret: process.env.SESSION_SECRET || "your_fallback_secret",
   resave: false,
