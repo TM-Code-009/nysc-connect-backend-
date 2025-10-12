@@ -15,10 +15,18 @@ const app = express();
 // ✅ Middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://green-linkio.web.app"],
+    origin: [
+      "http://localhost:5173",
+      "https://green-linkio.web.app",
+      "https://nysc-connect-frontend.onrender.com" // add your deployed frontend domain if any
+    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+
+app.options("*", cors());
 
 app.use(express.json());
 
