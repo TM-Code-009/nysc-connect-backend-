@@ -8,17 +8,35 @@ export const getProfile = async (req: Request, res: Response) => {
   res.status(200).json(user);
 };
 
-// Update Profile
 export const updateProfile = async (req: Request, res: Response) => {
-  const userId = (req.user as IUser)._id;
-  const updates = req.body;
+  try {
+    const userId = (req.user as IUser)._id;
+    const updates = req.body;
 
-  const user = await User.findByIdAndUpdate(
-    userId,
-    { $set: updates },
-    { new: true }
-  ).select("-password");
+    // Deep merge for nested fields like socialLinks
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-  if (!user) return res.status(404).json({ message: "User not found" });
-  res.status(200).json(user);
+    // Manually assign fields
+    user.name = updates.name ?? user.name;
+    user.bio = updates.bio ?? user.bio;
+    user.state = updates.state ?? user.state;
+    user.lga = updates.lga ?? user.lga;
+    user.ppa = updates.ppa ?? user.ppa;
+    user.batch = updates.batch ?? user.batch;
+    user.avatar = updates.avatar ?? user.avatar;
+
+    if (updates.socialLinks) {
+      user.socialLinks = {
+        ...user.socialLinks,
+        ...updates.socialLinks,
+      };
+    }
+
+    await user.save();
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Update error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };
