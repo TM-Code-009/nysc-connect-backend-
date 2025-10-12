@@ -1,14 +1,14 @@
 import express from "express";
 import { getProfile, updateProfile } from "../controllers/userController";
-import { protect } from "../middlewares/authMiddleware";
+import { protect } from "../middlewares/authMiddleware"
 import { asyncHandler } from "../utils/asynuHandler";
 
 const router = express.Router();
 
-router
+// Get user profile
+router.get("/profile", protect, asyncHandler(getProfile));
 
-  router.get("/profile", asyncHandler(protect), asyncHandler(getProfile));
-  router.put("/profile", asyncHandler(protect), asyncHandler(updateProfile));
-
+// Update user profile
+router.put("/profile", protect, asyncHandler(updateProfile));
 
 export default router;
