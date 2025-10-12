@@ -1,7 +1,7 @@
 import express from "express";
 import { getProfile, updateProfile } from "../controllers/userController";
 import { protect } from "../middlewares/authMiddleware";
-import { asyncHandler } from "../utils/asynuHandler";
+import { asyncHandler } from "../utils/asynuHandler"; // ✅ fixed typo
 
 const router = express.Router();
 
