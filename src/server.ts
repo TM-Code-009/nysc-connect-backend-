@@ -13,11 +13,14 @@ import userRoutes from "./routes/useRoutes";
 // Auth
 import passport from "passport";
 import "./config/passport";
+import cookieParser from "cookie-parser";
+import rateLimit from "express-rate-limit";
+
 
 const app = express();
 
 /* =========================
-   CORS CONFIG
+CORS CONFIG
 ========================= */
 app.use(
   cors({
@@ -35,15 +38,24 @@ app.use(
 
 
 /* =========================
-   BODY PARSER
+BODY PARSER
 ========================= */
 app.use(express.json());
 
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many requests, try again later.",
+});
+
+app.use(limiter);
+
 /* =========================
-   DATABASE
+DATABASE
 ========================= */
 connectDB();
 
+app.use(cookieParser());
 /* =========================
    SESSION CONFIG
 ========================= */

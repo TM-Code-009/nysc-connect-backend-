@@ -2,9 +2,16 @@ import { Request, Response } from "express";
 import User, { IUser } from "../models/User";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import sendEmail, { generateVerificationEmail } from "../utils/email";
+import {
+  generateAccessToken,
+  generateRefreshToken
+} from "../utils/token";
+import { sendEmail, generateVerificationEmail, generateResetPasswordEmail } from "../utils/email";
 
-// ✅ REGISTER USER
+
+// =========================
+// REGISTER
+// =========================
 export const registerUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
@@ -28,18 +35,17 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
       isVerified: false,
     });
 
-    // 🔐 Create verification token
     const token = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET!,
       { expiresIn: "3h" }
     );
 
-    const verificationLink = `${process.env.FRONTEND_URL}/verify/${token}`;
+    const verificationLink =
+      `${process.env.FRONTEND_URL}/verify/${encodeURIComponent(token)}`;
 
-    // 📩 FIXED: pass proper name (not email)
     const { subject, text, html } = generateVerificationEmail(
-      email.split("@")[0], // clean name
+      email.split("@")[0],
       verificationLink
     );
 
@@ -48,77 +54,114 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
     await sendEmail(email, subject, text, html);
 
     res.status(201).json({
-      message: "User registered successfully. Please check your email to verify your account.",
+      message: "User registered successfully. Check email to verify account.",
     });
   } catch (error) {
-    console.error("❌ Error during registration:", error);
+    console.error("❌ Register error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// ✅ LOGIN USER
+
+// =========================
+// LOGIN
+// =========================
 export const loginUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
     const user: IUser | null = await User.findOne({ email });
+
     if (!user || !(await bcrypt.compare(password, user.password || ""))) {
       res.status(401).json({ message: "Invalid email or password" });
       return;
     }
 
-    // 🚫 Check if email is verified
     if (!user.isVerified) {
-      res.status(403).json({ message: "Please verify your email before logging in." });
+      res.status(403).json({ message: "Please verify your email first." });
       return;
     }
 
-    // ✅ Create JWT for session
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, { expiresIn: "1d" });
+    // 🔐 Generate tokens
+    const accessToken = generateAccessToken(user._id.toString());
+    const refreshToken = generateRefreshToken(user._id.toString());
+
+    // 💾 Store refresh token in DB
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    // 🍪 Set secure cookie (HTTP ONLY)
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // 🚀 Send response
     res.status(200).json({
       message: "Login successful",
-      token,
+      accessToken,
       user: {
         _id: user._id,
         email: user.email,
         name: user.name,
         avatar: user.avatar,
+        isVerified: user.isVerified,
       },
     });
+
   } catch (error) {
-    console.error("Error during login:", error);
+    console.error("❌ Login error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// ✅ VERIFY EMAIL
+
+// =========================
+// VERIFY EMAIL
+// =========================
 export const verifyEmail = async (req: Request, res: Response): Promise<void> => {
   try {
     const { token } = req.params;
+
     const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
 
     const user = await User.findById(decoded.id);
+
     if (!user) {
       res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    if (user.isVerified) {
+      res.status(200).json({ message: "Email already verified" });
       return;
     }
 
     user.isVerified = true;
     await user.save();
 
-    res.status(200).json({ message: "Email verified successfully. You can now log in." });
+    res.status(200).json({
+      message: "Email verified successfully",
+    });
+
   } catch (error) {
-    console.error("Email verification error:", error);
-    res.status(400).json({ message: "Invalid or expired verification link" });
+    console.error("❌ Verify error:", error);
+    res.status(400).json({ message: "Invalid or expired link" });
   }
 };
 
-// ✅ FORGOT PASSWORD
+
+// =========================
+// FORGOT PASSWORD
+// =========================
 export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email } = req.body;
 
-    const user: IUser | null = await User.findOne({ email });
+    const user = await User.findOne({ email });
+
     if (!user) {
       res.status(404).json({ message: "User not found" });
       return;
@@ -134,30 +177,18 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     user.resetPasswordExpires = new Date(Date.now() + 3600000);
     await user.save();
 
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    const resetLink =
+      `${process.env.FRONTEND_URL}/reset-password/${encodeURIComponent(resetToken)}`;
 
-    const subject = "🔐 Reset your password";
-    const text = `Reset your password: ${resetLink}`;
+    const { subject, text, html } =
+      generateResetPasswordEmail(user.email, resetLink);
 
-    const html = `
-      <div style="background:#000;color:#fff;padding:30px;font-family:Arial;">
-        <h2>Reset Password</h2>
-        <p>Click below to reset your password:</p>
-        <a href="${resetLink}" style="display:inline-block;padding:12px 20px;background:#00e676;color:#000;border-radius:6px;text-decoration:none;">
-          Reset Password
-        </a>
-        <p style="color:#aaa;margin-top:20px;">Expires in 1 hour</p>
-      </div>
-    `;
+    console.log("📧 Sending reset email:", email);
 
-    console.log("📧 Sending reset email to:", email);
-
-    await sendEmail(user.email, subject, text, html);
-
-    console.log("✅ Reset email sent successfully");
+    await sendEmail(email, subject, text, html);
 
     res.status(200).json({
-      message: "Password reset link sent to your email.",
+      message: "Password reset link sent",
     });
 
   } catch (error) {
@@ -166,7 +197,10 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
   }
 };
 
-// ✅ RESET PASSWORD
+
+// =========================
+// RESET PASSWORD
+// =========================
 export const resetPassword = async (req: Request, res: Response): Promise<void> => {
   try {
     const { token } = req.params;
@@ -202,8 +236,6 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     user.resetPasswordExpires = undefined;
 
     await user.save();
-
-    console.log("🔐 Password reset successful for:", user.email);
 
     res.status(200).json({
       message: "Password reset successful",

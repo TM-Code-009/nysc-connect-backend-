@@ -1,52 +1,156 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER, // your Gmail address
-    pass: process.env.GMAIL_PASS, // your Gmail App Password
-  },
-});
+// ==============================
+// INIT RESEND
+// ==============================
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-const sendEmail = async (
+// ==============================
+// GENERIC EMAIL SENDER
+// ==============================
+export const sendEmail = async (
   to: string,
   subject: string,
   text: string,
   html: string
 ): Promise<void> => {
   try {
-    const mailOptions = {
-      from: `"Green-link" <noreply@greenlink.com>`,
+    console.log("📧 GreenLink email sending to:", to);
+
+    const response = await resend.emails.send({
+      from: "GreenLink <onboarding@resend.dev>",
       to,
       subject,
       text,
       html,
-    };
+    });
 
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent to: ${to}`);
+    console.log("✅ Email sent successfully:", response);
   } catch (error) {
-    console.error("❌ Error sending email:", error);
+    console.error("❌ GreenLink email error:", error);
     throw error;
   }
 };
 
+// ==============================
+// EMAIL VERIFICATION TEMPLATE
+// ==============================
 export const generateVerificationEmail = (name: string, link: string) => {
-  const subject = "✅ Verify your email address";
-  const text = `Hi ${name}, click the link to verify your email: ${link}`;
-  const html = `
-    <div style="font-family: Arial, sans-serif; background: #000; color: #fff; padding: 2rem;">
-      <h2 style="font-size: 22px; color: #fff;">Verify your email address</h2>
-      <p style="font-size: 15px;">To continue setting up your NYSC Connect account, please verify that this is your email address.</p>
-      <a href="${link}" style="display: inline-block; margin: 20px 0; padding: 12px 20px; background-color: #00cc33; color: white; text-decoration: none; border-radius: 5px;">Verify email address</a>
-      <p style="font-size: 13px; color: #bbb;">This link will expire after 3 hours. If you didn’t request this, please ignore this email.</p>
-      <p style="font-size: 13px; color: #bbb;">Need help? Contact our support team.</p>
-    </div>
+  const subject = "✅ Verify your GreenLink account";
+
+  const text = `
+Hi ${name},
+
+Welcome to GreenLink 🌱
+
+Please verify your email by clicking the link below:
+
+${link}
+
+This link expires in 3 hours.
+
+If you didn’t create this account, you can ignore this email.
   `;
+
+  const html = `
+  <div style="font-family: Arial, sans-serif; background:#0f0f0f; color:#ffffff; padding:30px; border-radius:10px;">
+
+    <h2 style="color:#00cc66;">
+      Welcome to GreenLink 🌱
+    </h2>
+
+    <p style="font-size:15px; line-height:1.6;">
+      Hi <strong>${name}</strong>,<br/><br/>
+      Please verify your email address to activate your GreenLink account.
+    </p>
+
+    <a href="${link}"
+      style="
+        display:inline-block;
+        margin:20px 0;
+        padding:12px 24px;
+        background:#00cc66;
+        color:#000;
+        font-weight:bold;
+        text-decoration:none;
+        border-radius:6px;
+      ">
+      Verify Email Address
+    </a>
+
+    <p style="font-size:12px; color:#aaa;">
+      This link will expire in <strong>3 hours</strong>.
+    </p>
+
+    <p style="font-size:12px; color:#777;">
+      If you didn’t create this account, you can safely ignore this email.
+    </p>
+
+    <hr style="border:0; border-top:1px solid #222; margin:20px 0;" />
+
+    <p style="font-size:11px; color:#555;">
+      GreenLink Team
+    </p>
+
+  </div>
+  `;
+
   return { subject, text, html };
 };
 
-export default sendEmail;
+// ==============================
+// PASSWORD RESET TEMPLATE
+// ==============================
+export const generateResetPasswordEmail = (name: string, link: string) => {
+  const subject = "🔐 Reset your GreenLink password";
+
+  const text = `
+Hi ${name},
+
+A password reset was requested for your GreenLink account.
+
+Reset it here:
+${link}
+
+This link expires in 1 hour.
+
+If you didn’t request this, ignore this email.
+  `;
+
+  const html = `
+  <div style="font-family: Arial, sans-serif; background:#000; color:#fff; padding:30px; border-radius:10px;">
+
+    <h2 style="color:#00e676;">Reset Your Password</h2>
+
+    <p>If you requested a password reset, click below:</p>
+
+    <a href="${link}"
+      style="
+        display:inline-block;
+        padding:12px 20px;
+        background:#00e676;
+        color:#000;
+        font-weight:bold;
+        text-decoration:none;
+        border-radius:6px;
+        margin:20px 0;
+      ">
+      Reset Password
+    </a>
+
+    <p style="color:#aaa; font-size:12px;">
+      This link expires in 1 hour.
+    </p>
+
+    <p style="color:#666; font-size:12px;">
+      If you didn’t request this, ignore this email.
+    </p>
+
+  </div>
+  `;
+
+  return { subject, text, html };
+};

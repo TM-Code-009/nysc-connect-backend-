@@ -1,6 +1,7 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema, Types } from "mongoose";
 
 export interface IUser extends Document {
+  _id: Types.ObjectId;
   name: string;
   email: string;
   password?: string; // Optional for OAuth users
@@ -10,6 +11,7 @@ export interface IUser extends Document {
   lga?: string;
   ppa?: string;
   batch?: string;
+  refreshToken:string;
   socialLinks?: {
     twitter?: string;
     linkedin?: string;
@@ -38,6 +40,10 @@ const userSchema = new Schema<IUser>(
       linkedin: { type: String },
       instagram: { type: String },
     },
+    refreshToken: {
+  type: String,
+  default: null,
+},
     isAdmin: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
     googleId: { type: String },
