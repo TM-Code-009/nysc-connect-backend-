@@ -1,17 +1,23 @@
+import dotenv from "dotenv";
+dotenv.config({ path: ".env" });
+
+console.log("🔥 ENV CHECK =>", {
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+});
+
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import User from "../models/User";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 passport.use(
   new GoogleStrategy(
     {
-      clientID: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      callbackURL: "https://nysc-connect-backend.onrender.com/api/auth/google/callback"
-,
+      clientID: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      callbackURL:
+        process.env.GOOGLE_CALLBACK_URL ||
+        "https://nysc-connect-backend.onrender.com/api/auth/google/callback",
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -27,15 +33,16 @@ passport.use(
         }
 
         done(null, user);
-      } catch (err:any) {
-        done(err);
+      } catch (err) {
+        done(err as any);
       }
     }
   )
 );
 
 passport.serializeUser((user: any, done) => done(null, user.id));
-passport.deserializeUser(async (id, done) => {
+
+passport.deserializeUser(async (id: string, done) => {
   const user = await User.findById(id);
   done(null, user);
 });

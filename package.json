@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "ts-node-dev src/server.ts",
+    "dev": "node -r dotenv/config node_modules/ts-node-dev/lib/bin.js src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js"
   },
@@ -18,7 +18,7 @@
     "bcryptjs": "^3.0.2",
     "connect-mongo": "^5.1.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.5.0",
+    "dotenv": "^16.6.1",
     "express": "^5.1.0",
     "express-session": "^1.18.1",
     "express-validator": "^7.2.1",
@@ -35,9 +35,10 @@
     "@types/express-session": "^1.18.2",
     "@types/express-validator": "^2.20.33",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^24.0.1",
+    "@types/node": "^24.12.2",
     "@types/passport-google-oauth20": "^2.0.16",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
   }
 }

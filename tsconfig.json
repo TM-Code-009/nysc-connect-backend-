@@ -6,6 +6,7 @@
       "strict": true,
       "moduleResolution": "node",
       "outDir": "./dist",
+      "rootDir": "./src",
       "baseUrl": "./",
       "skipLibCheck": true,
       "typeRoots": ["./types", "./node_modules/@types"]

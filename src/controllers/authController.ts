@@ -18,25 +18,40 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
     if (userExists) {
       res.status(400).json({ message: "User already exists" });
       return;
-    } 
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ email, password: hashedPassword });
 
-    // 🔐 Create email verification token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, { expiresIn: "3h" });
+    const user = await User.create({
+      email,
+      password: hashedPassword,
+      isVerified: false,
+    });
+
+    // 🔐 Create verification token
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET!,
+      { expiresIn: "3h" }
+    );
+
     const verificationLink = `${process.env.FRONTEND_URL}/verify/${token}`;
 
-    // 📩 Send verification email
-    const { subject, text, html } = generateVerificationEmail(email, verificationLink);
+    // 📩 FIXED: pass proper name (not email)
+    const { subject, text, html } = generateVerificationEmail(
+      email.split("@")[0], // clean name
+      verificationLink
+    );
+
+    console.log("📧 Sending verification email to:", email);
+
     await sendEmail(email, subject, text, html);
 
     res.status(201).json({
       message: "User registered successfully. Please check your email to verify your account.",
-      token,
     });
   } catch (error) {
-    console.error("Error during registration:", error);
+    console.error("❌ Error during registration:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -109,32 +124,44 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Generate reset token valid for 1 hour
-    const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, { expiresIn: "1h" });
+    const resetToken = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET!,
+      { expiresIn: "1h" }
+    );
 
-    // Save token & expiry
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
+    user.resetPasswordExpires = new Date(Date.now() + 3600000);
     await user.save();
 
     const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
     const subject = "🔐 Reset your password";
-    const text = `A password change was requested. Use this link to reset your password: ${resetLink}`;
+    const text = `Reset your password: ${resetLink}`;
+
     const html = `
-      <div style="background-color:#000; color:#fff; padding:30px; font-family: Arial, sans-serif; border-radius: 10px;">
-        <h1 style="font-size: 24px;">Reset Password</h1>
-        <p>If you requested a password reset, click below:</p>
-        <a href="${resetLink}" style="background-color:#00e676; color:#000; padding:12px 20px; border-radius:6px; text-decoration:none;">Reset Password</a>
-        <p style="color:#bbb; margin-top:20px;">This link expires in 1 hour. If you didn’t request this, ignore this email.</p>
+      <div style="background:#000;color:#fff;padding:30px;font-family:Arial;">
+        <h2>Reset Password</h2>
+        <p>Click below to reset your password:</p>
+        <a href="${resetLink}" style="display:inline-block;padding:12px 20px;background:#00e676;color:#000;border-radius:6px;text-decoration:none;">
+          Reset Password
+        </a>
+        <p style="color:#aaa;margin-top:20px;">Expires in 1 hour</p>
       </div>
     `;
 
+    console.log("📧 Sending reset email to:", email);
+
     await sendEmail(user.email, subject, text, html);
 
-    res.status(200).json({ message: "Password reset link sent to your email." });
+    console.log("✅ Reset email sent successfully");
+
+    res.status(200).json({
+      message: "Password reset link sent to your email.",
+    });
+
   } catch (error) {
-    console.error("Forgot password error:", error);
+    console.error("❌ Forgot password error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -146,15 +173,15 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     const { password } = req.body;
 
     if (!token || !password) {
-      res.status(400).json({ message: "Token and new password are required" });
+      res.status(400).json({ message: "Token and password required" });
       return;
     }
 
-    // Verify token
     let decoded: any;
+
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET!);
-    } catch (err) {
+    } catch {
       res.status(400).json({ message: "Invalid or expired token" });
       return;
     }
@@ -162,7 +189,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     const user = await User.findOne({
       _id: decoded.id,
       resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() },
+      resetPasswordExpires: { $gt: new Date() },
     });
 
     if (!user) {
@@ -170,16 +197,20 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Hash & set new password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    user.password = hashedPassword;
+    user.password = await bcrypt.hash(password, 10);
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
+
     await user.save();
 
-    res.status(200).json({ message: "Password reset successfully. You can now log in." });
+    console.log("🔐 Password reset successful for:", user.email);
+
+    res.status(200).json({
+      message: "Password reset successful",
+    });
+
   } catch (error) {
-    console.error("Reset password error:", error);
+    console.error("❌ Reset password error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };

@@ -1,24 +1,30 @@
 import express from "express";
-import dotenv from "dotenv";
-import authRoutes from "./routes/authRoutes";
-import userRoutes from "./routes/useRoutes"; // ✅ fixed the typo here
 import cors from "cors";
-import connectDB from "./utils/db";
-import passport from "passport";
-import "./config/passport";
 import session from "express-session";
 import MongoStore from "connect-mongo";
 
-dotenv.config();
+// Database
+import connectDB from "./utils/db";
+
+// Routes
+import authRoutes from "./routes/authRoutes";
+import userRoutes from "./routes/useRoutes";
+
+// Auth
+import passport from "passport";
+import "./config/passport";
+
 const app = express();
 
-// ✅ Middleware
+/* =========================
+   CORS CONFIG
+========================= */
 app.use(
   cors({
     origin: [
       "http://localhost:5173",
       "https://green-linkio.web.app",
-      "https://nysc-connect-frontend.onrender.com" // add your deployed frontend domain if any
+      "https://nysc-connect-frontend.onrender.com",
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -26,48 +32,70 @@ app.use(
   })
 );
 
-app.options("*", cors());
 
+
+/* =========================
+   BODY PARSER
+========================= */
 app.use(express.json());
 
-// ✅ Connect MongoDB
+/* =========================
+   DATABASE
+========================= */
 connectDB();
 
-// ✅ Sessions (must come before passport.session)
+/* =========================
+   SESSION CONFIG
+========================= */
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "your_fallback_secret",
+    secret: process.env.SESSION_SECRET || "fallback_secret",
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-      mongoUrl: process.env.MONGO_URI!,
+      mongoUrl: process.env.MONGO_URI as string,
       collectionName: "sessions",
     }),
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      maxAge: 1000 * 60 * 60 * 24, // 1 day
+      maxAge: 1000 * 60 * 60 * 24,
     },
   })
 );
 
-// ✅ Passport initialization
+/* =========================
+   PASSPORT INIT
+========================= */
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ✅ Routes
+/* =========================
+   ROUTES
+========================= */
 app.use("/api/auth", authRoutes);
-app.use("/api/user", userRoutes); // ✅ corrected import and route mount
+app.use("/api/user", userRoutes);
 
-// ✅ Optional root route
+/* =========================
+   HEALTH CHECK
+========================= */
 app.get("/", (req, res) => {
   res.send("✅ NYSC Connect Backend is running successfully!");
 });
 
-// ✅ 404 handler
+/* =========================
+   404 HANDLER
+========================= */
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
+/* =========================
+   START SERVER
+========================= */
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+app.listen(PORT, () => {
+  console.log("GOOGLE CLIENT ID:", process.env.GOOGLE_CLIENT_ID);
+  console.log(`🚀 Server running on port ${PORT}`);
+});
